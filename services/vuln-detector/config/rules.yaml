@@ -1,0 +1,167 @@
+# SafeOps Security Rules Configuration
+# Based on OWASP, SLSA, and CIS standards
+
+rules:
+  # ===========================================
+  # SLSA Rules - Supply Chain Security
+  # ===========================================
+  - id: SLSA-001
+    name: Unpinned GitHub Action
+    description: GitHub Action using @latest, @main, or @master instead of a pinned SHA
+    category: SLSA
+    severity: HIGH
+    pattern: 'uses:\s*[\w\-]+\/[\w\-]+@(latest|main|master|v\d+)'
+    rule_type: regex
+    remediation: |
+      Pin the action to a specific commit SHA for reproducibility and security.
+      Example: uses: actions/checkout@v4  →  uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    
+  - id: SLSA-002
+    name: Missing Checkout Action
+    description: Build commands without explicit code checkout
+    category: SLSA
+    severity: MEDIUM
+    pattern: '(npm|yarn|pip|maven|gradle|cargo|go)\s+(install|build|test)'
+    rule_type: regex
+    remediation: Ensure actions/checkout is called before build steps
+
+  - id: SLSA-003
+    name: Artifact Without Integrity Check
+    description: Download artifact without hash verification
+    category: SLSA
+    severity: MEDIUM
+    pattern: '(wget|curl)\s+.*(?!sha256|sha512|checksum)'
+    rule_type: regex
+    remediation: Verify artifact integrity using checksums before use
+
+  # ===========================================
+  # OWASP Rules - Application Security
+  # ===========================================
+  - id: OWASP-001
+    name: Exposed Secret in Logs
+    description: Potential secret or API key exposed in pipeline logs
+    category: OWASP
+    severity: CRITICAL
+    pattern: '(api[_-]?key|apikey)\s*[=:]\s*["\''"]?([A-Za-z0-9_\-]{20,})'
+    rule_type: regex
+    remediation: Use secret management and mask secrets in logs
+
+  - id: OWASP-002
+    name: Hardcoded Password
+    description: Hardcoded password in workflow file
+    category: OWASP
+    severity: CRITICAL
+    pattern: '(password|passwd|pwd)\s*[=:]\s*["\''"][^"\''"]+["\''"]'
+    rule_type: regex
+    remediation: Use GitHub Secrets or environment variables for credentials
+
+  - id: OWASP-003
+    name: GitHub Token Exposure
+    description: GitHub personal or OAuth token exposed
+    category: OWASP
+    severity: CRITICAL
+    pattern: '(ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9]{22}_[A-Za-z0-9]{59})'
+    rule_type: regex
+    remediation: Immediately rotate the token and use secrets management
+
+  - id: OWASP-004
+    name: AWS Credentials Exposure
+    description: AWS Access Key ID exposed in logs
+    category: OWASP
+    severity: CRITICAL
+    pattern: 'AKIA[A-Z0-9]{16}'
+    rule_type: regex
+    remediation: Rotate AWS credentials and use IAM roles or secrets manager
+
+  - id: OWASP-005
+    name: Private Key Exposure
+    description: Private key content detected in logs
+    category: OWASP
+    severity: CRITICAL
+    pattern: '-----BEGIN (?:RSA |EC |DSA )?PRIVATE KEY-----'
+    rule_type: regex
+    remediation: Immediately rotate the key and never commit private keys
+
+  - id: OWASP-006
+    name: Script Injection Risk
+    description: User-controlled input used directly in scripts
+    category: OWASP
+    severity: HIGH
+    pattern: '\$\{\{\s*(github\.event\.(issue|pull_request|comment)\.body|github\.event\..*\.title)'
+    rule_type: regex
+    remediation: Sanitize user input or use intermediate environment variables
+
+  - id: OWASP-007
+    name: Insecure Curl Command
+    description: Curl command without certificate verification
+    category: OWASP
+    severity: MEDIUM
+    pattern: 'curl\s+.*(-k|--insecure)'
+    rule_type: regex
+    remediation: Remove -k/--insecure flag and use proper SSL verification
+
+  # ===========================================
+  # CIS Rules - Configuration Security
+  # ===========================================
+  - id: CIS-001
+    name: Write-All Permissions
+    description: Workflow has write-all permissions which is overly permissive
+    category: CIS
+    severity: HIGH
+    pattern: 'permissions:\s*write-all'
+    rule_type: regex
+    remediation: Follow principle of least privilege and specify only required permissions
+
+  - id: CIS-002
+    name: Contents Write Permission
+    description: Workflow has write access to repository contents
+    category: CIS
+    severity: MEDIUM
+    pattern: 'contents:\s*write'
+    rule_type: regex
+    remediation: Only grant write access when absolutely necessary
+
+  - id: CIS-003
+    name: Self-Hosted Runner Risk
+    description: Using self-hosted runners which may lack security controls
+    category: CIS
+    severity: MEDIUM
+    pattern: 'runs-on:\s*self-hosted'
+    rule_type: regex
+    remediation: Consider using GitHub-hosted runners or ensure self-hosted runners are properly secured
+
+  - id: CIS-004
+    name: Pull Request Target Trigger
+    description: Workflow triggered by pull_request_target with checkout
+    category: CIS
+    severity: HIGH
+    pattern: 'on:\s*pull_request_target'
+    rule_type: regex
+    remediation: Be cautious with pull_request_target as it runs with write permissions
+
+  - id: CIS-005
+    name: Debug Logging Enabled
+    description: Debug logging may expose sensitive information
+    category: CIS
+    severity: LOW
+    pattern: 'ACTIONS_STEP_DEBUG|ACTIONS_RUNNER_DEBUG'
+    rule_type: regex
+    remediation: Disable debug logging in production workflows
+
+  - id: CIS-006
+    name: Latest Docker Tag
+    description: Using 'latest' tag for Docker images is unpredictable
+    category: CIS
+    severity: MEDIUM
+    pattern: '(docker\s+pull|image:)\s*[\w\-/]+:latest'
+    rule_type: regex
+    remediation: Pin Docker images to specific versions or SHAs
+
+  - id: CIS-007
+    name: Missing Timeout
+    description: Job without timeout may run indefinitely
+    category: CIS
+    severity: LOW
+    pattern: 'runs-on:(?!.*timeout)'
+    rule_type: regex
+    remediation: Set timeout-minutes for all jobs to prevent stuck workflows

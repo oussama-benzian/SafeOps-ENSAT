@@ -1,0 +1,50 @@
+{# Template for restricting workflow permissions #}
+# Fix: Restrict Workflow Permissions
+# Rule: {{ rule_id }}
+# Severity: {{ severity }}
+# Description: {{ description }}
+
+# Original (overly permissive):
+# permissions: write-all
+# OR
+# permissions:
+#   contents: write
+#   packages: write
+#   issues: write
+#   pull-requests: write
+
+# Recommended fix:
+# Apply the principle of least privilege
+permissions:
+  contents: read          # Read access to repository contents
+  {% if needs_packages %}
+  packages: read          # Read access to packages (remove if not needed)
+  {% endif %}
+  {% if needs_issues %}
+  issues: read            # Read access to issues (remove if not needed)
+  {% endif %}
+  {% if needs_pr %}
+  pull-requests: read     # Read access to PRs (remove if not needed)
+  {% endif %}
+
+# Common permission scenarios:
+
+# For a simple CI build:
+# permissions:
+#   contents: read
+
+# For releasing packages:
+# permissions:
+#   contents: read
+#   packages: write
+
+# For commenting on PRs:
+# permissions:
+#   contents: read
+#   pull-requests: write
+
+# For creating releases:
+# permissions:
+#   contents: write
+
+# Reference: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

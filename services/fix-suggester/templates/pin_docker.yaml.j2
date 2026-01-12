@@ -1,0 +1,39 @@
+{# Template for pinning Docker images #}
+# Fix: Pin Docker Image to Specific Digest
+# Rule: {{ rule_id }}
+# Severity: {{ severity }}
+# Description: {{ description }}
+
+# Original (unpredictable):
+# container:
+#   image: {{ image_name }}:latest
+# OR
+# - run: docker pull {{ image_name }}:latest
+
+# Recommended fix:
+# Pin to a specific image digest for reproducibility
+
+container:
+  image: {{ image_name }}@sha256:{{ image_digest | default('DIGEST_HERE') }}
+
+# OR for docker commands:
+# - run: docker pull {{ image_name }}@sha256:{{ image_digest | default('DIGEST_HERE') }}
+
+# How to find the digest:
+# 1. Pull the image first:
+#    docker pull {{ image_name }}:{{ tag | default('latest') }}
+#
+# 2. Get the digest:
+#    docker inspect --format='{{ '{{' }}index .RepoDigests 0{{ '}}' }}' {{ image_name }}:{{ tag | default('latest') }}
+#
+# 3. Or use Docker Hub / registry UI to find the digest
+
+# Example digests (these change with each release, so verify):
+# node:20 -> node@sha256:abc123...
+# python:3.11 -> python@sha256:def456...
+# ubuntu:22.04 -> ubuntu@sha256:ghi789...
+
+# Benefits of pinning:
+# - Reproducible builds
+# - Protection against supply chain attacks
+# - Consistent behavior across runs

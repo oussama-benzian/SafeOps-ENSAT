@@ -1,0 +1,14 @@
+{
+  "model_type": "Isolation Forest",
+  "contamination": 0.05,
+  "n_estimators": 100,
+  "random_state": 42,
+  "training_date": "2025-12-23 14:04:38.831138",
+  "dataset_size": 20000,
+  "anomaly_injection_rate": 0.05,
+  "features": [
+    "job_duration_seconds",
+    "step_count",
+    "output_size_bytes"
+  ]
+}

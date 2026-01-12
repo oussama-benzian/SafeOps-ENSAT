@@ -1,0 +1,42 @@
+{# Template for sanitizing user input in scripts #}
+# Fix: Sanitize User Input in Scripts
+# Rule: {{ rule_id }}
+# Severity: {{ severity }}
+# Description: {{ description }}
+
+# Original (vulnerable to injection):
+# - run: |
+#     echo "Title: ${{ '{{' }} github.event.issue.title {{ '}}' }}"
+#     echo "Body: ${{ '{{' }} github.event.pull_request.body {{ '}}' }}"
+
+# Recommended fix:
+# Use environment variables as an intermediate step
+
+# Step 1: Set input as environment variable
+- name: Process user input safely
+  env:
+    USER_INPUT: ${{ '{{' }} github.event.{{ input_source }}.{{ input_field }} {{ '}}' }}
+  run: |
+    # The input is now in an environment variable, not directly interpolated
+    # This prevents command injection
+    echo "Processing: $USER_INPUT"
+    
+    # If you need to use the value in a script, validate it first
+    if [[ "$USER_INPUT" =~ ^[a-zA-Z0-9[:space:]._-]+$ ]]; then
+      echo "Input is safe to use"
+    else
+      echo "Input contains potentially dangerous characters"
+      exit 1
+    fi
+
+# Alternative: Use actions/github-script for safer JavaScript execution
+- name: Process with github-script
+  uses: actions/github-script@v7
+  with:
+    script: |
+      const input = context.payload.{{ input_source }}.{{ input_field }};
+      // Input is properly escaped in JavaScript context
+      console.log(`Processing: ${input}`);
+
+# More information:
+# https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections

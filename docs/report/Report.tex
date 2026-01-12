@@ -1,0 +1,392 @@
+\documentclass[12pt, a4paper]{article}
+
+%% Required Packages
+\usepackage{amssymb}
+\usepackage{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% --- Additional Packages Required for Content ---
+\usepackage{booktabs} % Required for table formatting
+\usepackage{graphicx} % Required for including images
+\usepackage{float}    % Required for [H] figure placement
+\usepackage{amsmath}  % Required for math formatting
+\usepackage[a4paper,margin=1in]{geometry} % Control margins
+\usepackage{enumitem} % Custom list styling
+\usepackage{mathptmx} % Times-like font for paper styling
+\setlist[itemize]{label=\raisebox{0.2ex}{\scriptsize$\bullet$}, leftmargin=*}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+{\Huge\bfseries SafeOps: An integrated platform for automated security analysis and compliance in DevSecOps pipelines\par}
+\vspace{1.2cm}
+{\Large\textsc{Prepared by}\par}
+\vspace{0.4cm}
+{\large Hind Soulaimani\par}
+{\large Maryam Chentouf\par}
+{\large Houssam Joudar\par}
+{\large Oussama Ben Zian\par}
+\vspace{0.5cm}
+{\large Supervised by Professor Saiida Lazaar\par}
+\vspace{0.2cm}
+{\large Departeent of Cybersecurity and cyber intelligence, ENSA Tanger\par}
+
+\end{titlepage}
+
+\thispagestyle{plain}
+\vspace*{4cm}
+\noindent\rule{\textwidth}{0.3pt}\par
+\begin{center}
+{\Large\textsc{Abstract}\par}
+\end{center}
+\vspace{0.2cm}
+\noindent
+The integration of security protocols into the software development lifecycle is often hindered by the complexity of managing disparate analysis tools. This paper presents \textit{SafeOps}, an open-source platform designed to automate security analysis and compliance auditing within CI/CD pipelines. Built on a modular microservices architecture, the system combines rule-based vulnerability detection with unsupervised machine learning for anomaly detection. \textit{SafeOps} addresses the usability gap in security tooling by providing an intuitive web interface that enables users to ingest pipeline logs, visualize security findings, and generate compliance reports. By enhancing the traceability and reproducibility of security assessments, the software facilitates the effective adoption of DevSecOps practices for development teams, researchers, and educators.
+
+\vspace{0.2cm}
+\noindent\rule{\textwidth}{0.3pt}\par
+\vspace{0.6cm}
+\noindent\textbf{Keywords:} DevSecOps; Security Automation; Static Analysis; Anomaly Detection; Compliance; Machine Learning
+\clearpage
+
+
+% --- Motivation ---
+
+\section{Motivation and significance}
+\label{sec:motivation}
+
+The widespread adoption of Continuous Integration and Continuous Deployment (CI/CD) pipelines has revolutionized software delivery, enabling teams to deploy updates rapidly and frequently. However, this velocity often comes at the cost of security. CI/CD environments have become prime targets for attackers, as they are prone to critical vulnerabilities categorized by industry standards such as OWASP, SLSA, and CIS benchmarks. Common security issues include:
+
+\begin{itemize}
+    \item \textbf{Secret and credential exposure:} API keys, tokens, and passwords accidentally committed to logs or source code.
+    \item \textbf{Supply chain vulnerabilities:} Unpinned dependencies and GitHub Actions using mutable tags instead of cryptographic hashes.
+    \item \textbf{Excessive permissions:} Overly permissive workflow configurations granting write access to repository contents.
+    \item \textbf{Configuration weaknesses:} Missing timeouts, insecure network calls, and debug logging in production.
+\end{itemize}
+
+Traditional security assessments, often performed manually at the end of the development cycle, are insufficient to address these dynamic threats without creating bottlenecks. There is a pressing need for automated tools that integrate seamlessly into existing workflows. \textit{SafeOps} addresses this challenge by enabling DevOps teams to transition effectively to \textbf{DevSecOps}, embedding a dedicated layer of security directly into the pipeline. The platform automates the detection of misconfigurations and vulnerabilities early in the lifecycle ("shift-left"), ensuring that speed does not compromise the security posture of modern software supply chains.
+
+
+\begin{table}[!h]
+\begin{tabular}{|l|p{6.5cm}|p{6.5cm}|}
+\hline
+\textbf{Nr.} & \textbf{Code metadata description} & \textbf{Metadata} \\
+\hline
+C1 & Current code version & v1.0.0 \\
+\hline
+C2 & Permanent link to code/repository used for this code version & \url{https://github.com/oussama-benzian/SafeOps-ENSAT} \\
+\hline
+C3 & Permanent link to Reproducible Capsule & \url{https://github.com/oussama-benzian/SafeOps-ENSAT/wiki/Docs} \\
+\hline
+C4 & Legal Code License & MIT License \\
+\hline
+C5 & Code versioning system used & Git \\
+\hline
+C6 & Software code languages, tools, and services used & Python, JavaScript \\
+\hline
+C7 & Compilation requirements, operating environments \& dependencies & Container runtime, Python 3.9+, Node.js 18+ \\
+\hline
+C8 & If available Link to developer documentation/manual & \url{https://github.com/oussama-benzian/SafeOps-ENSAT/wiki/Docs} \\
+\hline
+C9 & Support email for questions & N/A \\
+\hline
+\end{tabular}
+\caption{Code metadata}
+\label{codeMetadata} 
+\end{table}
+
+\section{Software Description}
+
+\textit{SafeOps} is engineered as a distributed, microservices-based platform designed to automate security analysis within CI/CD pipelines. The system adopts a decoupled architecture to ensure scalability and fault tolerance, utilizing asynchronous messaging for data processing and synchronous REST APIs for user interaction.
+
+\subsection{Software Architecture}
+The platform follows an event-driven microservices architecture with seven specialized services orchestrated through a message broker and unified API gateway. Figure \ref{fig:arch} depicts the system topology.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{architecture.png}
+    \caption{The SafeOps Microservices Architecture}
+    \label{fig:arch}
+\end{figure}
+
+
+
+\subsubsection{Service Components}
+The architecture comprises the following microservices:
+
+\begin{enumerate}
+    \item \textbf{Log Collector:} A lightweight service responsible for ingesting CI/CD logs from external sources such as GitHub Actions workflow runs. It normalizes incoming data and persists raw logs to a document database for downstream processing.
+    
+    \item \textbf{Log Parser:} Consumes raw logs and extracts structured events including job metadata, step durations, output sizes, and workflow configurations. Parsed events are published to a message queue for parallel processing by detection engines.
+    
+    \item \textbf{Vulnerability Detector:} A rule-based static analysis engine that scans parsed workflow content against a configurable ruleset. Rules are defined using regular expression patterns categorized by security standards (OWASP, SLSA, CIS). Detected vulnerabilities are persisted to a relational database with full provenance.
+    
+    \item \textbf{Anomaly Detector:} An unsupervised machine learning component that analyzes pipeline behavioral metrics to identify deviations from established baselines. Uses the Isolation Forest algorithm to detect unusual patterns that rule-based scanning cannot identify.
+    
+    \item \textbf{Fix Suggester:} Consumes detected vulnerabilities from the message queue and generates remediation recommendations. Uses template-based suggestions mapped from rule definitions to provide actionable fixes.
+    
+    \item \textbf{Report Generator:} Aggregates security findings, anomaly detections, and pipeline statistics into comprehensive compliance reports. Supports PDF generation for audit documentation.
+    
+    \item \textbf{Dashboard:} A single-page application providing real-time visualization of security posture, vulnerability distribution, anomaly trends, and pipeline health metrics.
+\end{enumerate}
+
+\begin{table}[h]
+\begin{tabular}{|l|p{6.5cm}|p{6.5cm}|}
+\hline
+\textbf{Nr.} & \textbf{(Executable) software metadata description} & \textbf{Metadata} \\
+\hline
+S1 & Current software version & v1.0.0 \\
+\hline
+S2 & Permanent link to executables of this version & \\
+\hline
+S3 & Permanent link to Reproducible Capsule & \url{https://github.com/oussama-benzian/SafeOps-ENSAT/wiki/Docs} \\
+\hline
+S4 & Legal Software License & MIT License \\
+\hline
+S5 & Computing platforms/Operating Systems & Linux, Unix-like, Distributed/Web-based \\
+\hline
+S6 & Installation requirements \& dependencies & Docker, Docker Compose \\
+\hline
+S7 & Link to user manual  & \url{https://github.com/oussama-benzian/SafeOps-ENSAT/wiki/Docs} \\
+\hline
+S8 & Support email for questions & N/A \\
+\hline
+\end{tabular}
+\caption{Software metadata}
+\label{executabelMetadata} 
+\end{table}
+
+\subsubsection{Data Storage Layer}
+The platform employs a polyglot persistence strategy optimized for each data type:
+\begin{itemize}
+    \item \textbf{Document database:} Stores raw logs and parsed events with flexible schema for heterogeneous CI/CD data.
+    \item \textbf{Relational database:} Manages structured entities including vulnerabilities, security rules, and fix suggestions with referential integrity.
+    \item \textbf{Time-series database:} Persists pipeline metrics and detected anomalies with native time-based aggregation and retention policies.
+\end{itemize}
+
+\subsubsection{Communication Patterns}
+Services communicate through two patterns:
+\begin{itemize}
+    \item \textbf{Synchronous REST API:} The API gateway routes user requests to appropriate services, enabling real-time queries for dashboard visualization.
+    \item \textbf{Asynchronous messaging:} A message broker decouples the log parser from detection engines, enabling horizontal scaling of compute-intensive analysis without blocking the ingestion pipeline.
+\end{itemize}
+
+\subsection{End-to-End Workflow}
+The platform follows a predictable processing pipeline that keeps ingestion, analysis, and visualization decoupled:
+\begin{itemize}
+    \item \textbf{Ingest:} CI/CD logs or workflow files are submitted through the Log Collector and stored in MongoDB.
+    \item \textbf{Parse:} The Log Parser extracts structured events and publishes them to the message broker.
+    \item \textbf{Detect:} Vulnerability and anomaly services consume events in parallel to generate findings.
+    \item \textbf{Remediate:} Fix Suggester produces template-based recommendations tied to detected issues.
+    \item \textbf{Report:} Report Generator compiles findings into PDF/JSON artifacts for audit use.
+    \item \textbf{Visualize:} The Dashboard surfaces real-time status, trends, and findings for operators.
+\end{itemize}
+
+\subsection{Security Rule Engine}
+\label{sec:rules}
+
+The Vulnerability Detector implements a comprehensive ruleset aligned with industry security standards. Rules are defined declaratively with the following attributes: unique identifier, descriptive name, security category, severity level (CRITICAL, HIGH, MEDIUM, LOW), regex pattern, and remediation guidance.
+
+Table \ref{tab:rules} summarizes the security categories and example detections:
+
+\begin{table}[H]
+\centering
+\caption{Security Rule Categories in SafeOps}
+\label{tab:rules}
+\begin{tabular}{lll}
+\toprule
+\textbf{Standard} & \textbf{Example Rule} & \textbf{Severity} \\
+\midrule
+OWASP & Exposed API Key & CRITICAL \\
+OWASP & Hardcoded Password & CRITICAL \\
+OWASP & Private Key Exposure & CRITICAL \\
+SLSA & Unpinned GitHub Action & HIGH \\
+SLSA & Missing Artifact Integrity & MEDIUM \\
+CIS & Write-All Permissions & HIGH \\
+CIS & Missing Job Timeout & LOW \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Jenkins and SonarQube-Based Development Pipeline}
+
+During the development of SafeOps, a Jenkins-based CI/CD pipeline was employed to automate building, testing, and quality assurance tasks. SonarQube was integrated into this pipeline to perform continuous static code analysis, enabling early detection of code smells, security hotspots, and maintainability issues throughout the implementation phase.
+
+Each commit to the SafeOps repository triggered a Jenkins pipeline that executed unit tests, performed dependency checks, and launched SonarQube scans. The analysis results were used by the development team to iteratively improve code quality and security compliance prior to deployment. This setup ensured that the SafeOps platform itself adhered to the same DevSecOps principles it is designed to enforce.
+
+Pipeline execution logs generated by Jenkins were also used as input samples during the development and validation of the SafeOps log ingestion and analysis components. SonarQube reports were retrieved via its REST API and served as reference artifacts to validate the correctness of the Vulnerability Detector’s findings. This dual usage allowed SafeOps to be tested against realistic CI/CD outputs produced by an industry-standard toolchain.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{jenkins.png}
+\caption{Jenkins CI pipeline used during SafeOps development, including build, test, and SonarQube analysis stages}
+\label{fig:jenkins-dev}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+% Reduced width slightly to accommodate the fbox border without overflowing margins
+\fbox{\includegraphics[width=0.95\linewidth]{sonarqube.png}}
+\caption{SonarQube code quality and security analysis results generated during SafeOps development}
+\label{fig:sonarqube-dev}
+\end{figure}
+
+\clearpage % Forces pending figures to print before starting the new section
+
+\section{Data and Model Selection}
+
+The Anomaly Detector component employs unsupervised machine learning to identify behavioral deviations that static rule-based analysis cannot capture.
+
+\subsection{Algorithm Comparison}
+To select the optimal model for production, we compared Isolation Forest (IF) against One-Class SVM (OCSVM). The evaluation was conducted on a dataset of 25,000 samples containing simulated attack scenarios (e.g., cryptomining, data exfiltration) and realistic pipeline patterns.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{if_vs_ocsvm_comparison.png}
+    \caption{Model Comparison: Isolation Forest vs One-Class SVM.}
+    \label{fig:comparison}
+\end{figure}
+
+As shown in Table \ref{tab:comparison} and Figure \ref{fig:comparison}, Isolation Forest demonstrated superior performance for this use case. While OCSVM achieved perfect recall, it suffered from low precision (0.5256), leading to a high rate of false positives. Isolation Forest provided a balanced performance with significantly better precision and computational efficiency ($O(n \log n)$ vs $O(n^2)$), making it the preferred choice for real-time monitoring.
+
+\begin{table}[H]
+\centering
+\caption{Algorithm Performance Comparison}
+\label{tab:comparison}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Isolation Forest} & \textbf{One-Class SVM} \\
+\midrule
+Precision & \textbf{0.9701} & 0.5256 \\
+Recall & 0.9750 & \textbf{1.0000} \\
+F1-Score & \textbf{0.9726} & 0.6891 \\
+Accuracy & \textbf{0.9956} & 0.9278 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Production Model Implementation}
+The platform implements the Isolation Forest algorithm \cite{liu2008isolation}. The model is trained on 20 distinct features, including temporal metrics (build duration), structural features (step count), and resource usage (memory, CPU, network I/O).
+
+The production model performance, detailed in Table \ref{tab:metrics} and Figure \ref{fig:performance}, shows robust detection capabilities for attacks such as Resource Abuse ($\approx99\%$ detection rate) and DoS attacks.
+
+\begin{table}[H]
+\centering
+\caption{Production 
+Metrics (Isolation Forest)}
+\label{tab:metrics}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Score} \\
+\midrule
+Precision & 98.30\% \\
+Recall    & 98.30\% \\
+Accuracy  & 99.73\% \\
+ROC-AUC   & 99.99\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{confusion_matrix.png}
+\caption{Production Model Analysis (Confusion Matrix).}
+\label{fig:performance}
+\end{figure}
+
+\clearpage % Forces pending figures to print before starting the Examples section
+
+% --- Illustrative Examples ---
+\section{Illustrative Examples}
+\label{sec:examples}
+
+This section demonstrates the practical application of the platform in a real-world DevSecOps workflow, illustrating the progression from data ingestion to detailed security analysis.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{dashboard.png} % Dashboard Image
+    \caption{The Main Dashboard. The interface features a donut chart for vulnerability distribution, a real-time feed of recent findings, and quick-action cards for initiating new scans.}
+    \label{fig:dashboard}
+\end{figure}
+
+\newpage
+\subsection{Pipeline Analysis and Ingestion}
+To begin a security assessment, users interact with the analysis modal depicted in Figure \ref{fig:ingest}. The platform supports a dual-input method: users can provide a repository URL for static vulnerability scanning or upload raw execution logs for anomaly detection. This decoupling ensures that both source code and runtime behavior can be analyzed in parallel.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{modal.png} 
+    \caption{Pipeline Analysis Interface. Users can input a repository URL for static analysis or upload execution logs for behavioral anomaly detection.}
+    \label{fig:ingest}
+\end{figure}
+
+\subsection{Vulnerability Management}
+Once analysis is complete, findings are presented in the Vulnerabilities view (Figure \ref{fig:vulns}). This interface categorizes issues by severity (Critical, High, Medium, Low) and allows for filtering by status. The figure illustrates the detection of specific compliance failures, such as "Unpinned GitHub Action" (a supply chain risk) and "Missing Timeout" configurations. Each entry provides evidence context, enabling developers to pinpoint exactly where the misconfiguration resides in the CI/CD definition.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{vuln.png} 
+    \caption{Vulnerability Management View. A filtered list showing detected "High" severity issues, including unpinned dependencies and missing timeout configurations, with associated evidence.}
+    \label{fig:vulns}
+\end{figure}
+
+\newpage
+\subsection{Behavioral Anomaly Detection}
+Beyond static rules, the platform visualizes behavioral deviations using its machine learning engine. Figure \ref{fig:anomalies} displays the Anomaly Detection dashboard, which tracks deviation trends over a 7-day period. The interface highlights specific outliers, such as "Anomalous Large Output Detected," assigning a numeric "Deviation Score" (e.g., 0.04) to quantify the abnormality. This visualization aids in identifying subtle threats, such as data exfiltration attempts or resource abuse, that traditional static scanners often miss.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{anomaly.png}
+    \caption{Anomaly Detection Dashboard. The trend graph tracks behavioral deviations over time, while the details pane highlights specific anomalies like "Large Output" with calculated deviation scores.}
+    \label{fig:anomalies}
+\end{figure}
+
+
+\newpage
+\section{Impact and Conclusions}
+
+\subsection{Impact}
+The development of \textit{SafeOps} addresses critical gaps in CI/CD security:
+
+\begin{itemize}
+    \item \textbf{Operational efficiency:} Asynchronous processing enables continuous security analysis without blocking deployment pipelines. The decoupled architecture allows detection engines to scale independently based on workload.
+    
+    \item \textbf{Detection of novel threats:} While rule-based detection identifies known patterns, the Isolation Forest component detects statistical anomalies that may indicate zero-day exploits or insider threats that evade signature-based detection.
+    
+    \item \textbf{Standards compliance:} The ruleset codifies OWASP, SLSA, and CIS benchmarks into automated checks, enabling organizations to demonstrate compliance through generated audit reports.
+    
+    \item \textbf{Accessibility:} The unified dashboard democratizes security analysis, enabling developers without specialized security expertise to identify and remediate issues within their workflow.
+\end{itemize}
+
+\subsection{Conclusion}
+This paper presented \textit{SafeOps}, an open-source microservices platform for automated CI/CD security analysis. The system architecture combines rule-based vulnerability detection aligned with industry standards (OWASP, SLSA, CIS) with unsupervised anomaly detection using the Isolation Forest algorithm.
+
+Future work will focus on:
+\begin{itemize}
+    \item Enhancing the Fix Suggester with context-aware remediation using large language models
+    \item Expanding the ruleset to cover additional CI/CD platforms beyond GitHub Actions
+    \item Implementing real-time alerting and integration with incident management systems
+\end{itemize}
+
+
+
+% --- BIBLIOGRAPHY ---
+\clearpage
+
+\begin{thebibliography}{00}
+
+\bibitem[Liu et al.(2008)]{liu2008isolation}
+Liu, F. T., Ting, K. M. and Zhou, Z. H., 2008. Isolation Forest. In \textit{2008 Eighth IEEE International Conference on Data Mining} (pp. 413--422). IEEE. doi: 10.1109/ICDM.2008.17.
+
+\bibitem[OWASP(2023)]{owasp2023top10}
+OWASP Foundation, 2023. OWASP Top 10 CI/CD Security Risks. Available at: \url{https://owasp.org/www-project-top-10-ci-cd-security-risks/}.
+
+\bibitem[SLSA(2023)]{slsa2023spec}
+Supply-chain Levels for Software Artifacts, 2023. SLSA Specification. Available at: \url{https://slsa.dev/spec/v1.0/}.
+
+\end{thebibliography}
+
+\end{document}

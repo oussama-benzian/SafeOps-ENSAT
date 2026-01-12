@@ -1,0 +1,21 @@
+{
+    "name": "report-generator",
+    "version": "1.0.0",
+    "description": "SafeOps Report Generator - Generates PDF security reports",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "handlebars": "^4.7.8",
+        "pdfkit": "^0.14.0",
+        "pg": "^8.11.3"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.2"
+    }
+}

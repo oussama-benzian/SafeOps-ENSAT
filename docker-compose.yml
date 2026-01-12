@@ -1,0 +1,302 @@
+services:
+  # ===========================================
+  # MESSAGE BROKER
+  # ===========================================
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: safeops-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: safeops
+      RABBITMQ_DEFAULT_PASS: safeops_secret
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - safeops-network
+
+  # ===========================================
+  # DATABASES
+  # ===========================================
+  mongodb:
+    image: mongo:7
+    container_name: safeops-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: safeops
+      MONGO_INITDB_ROOT_PASSWORD: safeops_secret
+      MONGO_INITDB_DATABASE: safeops
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - safeops-network
+
+  postgres:
+    image: postgres:16
+    container_name: safeops-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: safeops
+      POSTGRES_PASSWORD: safeops_secret
+      POSTGRES_DB: safeops
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U safeops" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - safeops-network
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: safeops-timescaledb
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: safeops
+      POSTGRES_PASSWORD: safeops_secret
+      POSTGRES_DB: safeops_metrics
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./db/init-timescaledb.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U safeops" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - safeops-network
+
+  # ===========================================
+  # API GATEWAY
+  # ===========================================
+  gateway:
+    image: nginx:alpine
+    container_name: safeops-gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - log-collector
+      - log-parser
+      - vuln-detector
+      - fix-suggester
+      - anomaly-detector
+      - report-generator
+      - dashboard
+    networks:
+      - safeops-network
+
+  # ===========================================
+  # CI/CD
+  # ===========================================
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: safeops-jenkins
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/var/jenkins_home/workspace/safeops
+    networks:
+      - safeops-network
+
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: safeops-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonarqube
+      - SONAR_JDBC_USERNAME=sonarqube
+      - SONAR_JDBC_PASSWORD=sonarqube_secret
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    depends_on:
+      - sonarqube-db
+    networks:
+      - safeops-network
+
+  sonarqube-db:
+    image: postgres:16
+    container_name: safeops-sonarqube-db
+    environment:
+      - POSTGRES_USER=sonarqube
+      - POSTGRES_PASSWORD=sonarqube_secret
+      - POSTGRES_DB=sonarqube
+    volumes:
+      - sonarqube_db_data:/var/lib/postgresql/data
+    networks:
+      - safeops-network
+  # ===========================================
+  # MICROSERVICES
+  # ===========================================
+  log-collector:
+    build:
+      context: ./services/log-collector
+      dockerfile: Dockerfile
+    container_name: safeops-log-collector
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://safeops:safeops_secret@mongodb:27017/safeops?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - safeops-network
+
+  log-parser:
+    build:
+      context: ./services/log-parser
+      dockerfile: Dockerfile
+    container_name: safeops-log-parser
+    ports:
+      - "3002:5000"
+    environment:
+      MONGODB_URI: mongodb://safeops:safeops_secret@mongodb:27017/safeops?authSource=admin
+      RABBITMQ_URL: amqp://safeops:safeops_secret@rabbitmq:5672/
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - safeops-network
+
+  vuln-detector:
+    build:
+      context: ./services/vuln-detector
+      dockerfile: Dockerfile
+    container_name: safeops-vuln-detector
+    ports:
+      - "3003:5000"
+    environment:
+      MONGODB_URI: mongodb://safeops:safeops_secret@mongodb:27017/safeops?authSource=admin
+      POSTGRES_URI: postgresql://safeops:safeops_secret@postgres:5432/safeops
+      RABBITMQ_URL: amqp://safeops:safeops_secret@rabbitmq:5672/
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - safeops-network
+
+  fix-suggester:
+    build:
+      context: ./services/fix-suggester
+      dockerfile: Dockerfile
+    container_name: safeops-fix-suggester
+    ports:
+      - "3004:5000"
+    environment:
+      POSTGRES_URI: postgresql://safeops:safeops_secret@postgres:5432/safeops
+      RABBITMQ_URL: amqp://safeops:safeops_secret@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - safeops-network
+
+  anomaly-detector:
+    build:
+      context: ./services/anomaly-detector
+      dockerfile: Dockerfile
+    container_name: safeops-anomaly-detector
+    ports:
+      - "3005:5000"
+    environment:
+      MONGODB_URI: mongodb://safeops:safeops_secret@mongodb:27017/safeops?authSource=admin
+      TIMESCALEDB_URI: postgresql://safeops:safeops_secret@timescaledb:5432/safeops_metrics
+      RABBITMQ_URL: amqp://safeops:safeops_secret@rabbitmq:5672/
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - safeops-network
+
+  report-generator:
+    build:
+      context: ./services/report-generator
+      dockerfile: Dockerfile
+    container_name: safeops-report-generator
+    ports:
+      - "3006:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      POSTGRES_URI: postgresql://safeops:safeops_secret@postgres:5432/safeops
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - safeops-network
+
+  dashboard:
+    build:
+      context: ./services/dashboard
+      dockerfile: Dockerfile
+    container_name: safeops-dashboard
+    ports:
+      - "3007:80"
+    environment:
+      VITE_API_BASE_URL: /api/v1
+    networks:
+      - safeops-network
+
+# ===========================================
+# VOLUMES
+# ===========================================
+volumes:
+  rabbitmq_data:
+  mongodb_data:
+  postgres_data:
+  timescaledb_data:
+  jenkins_home:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  sonarqube_db_data:
+
+    # ===========================================
+    # NETWORKS
+    # ===========================================
+networks:
+  safeops-network:
+    driver: bridge

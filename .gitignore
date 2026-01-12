@@ -1,0 +1,9 @@
+db/
+scenarios/
+logs/
+services/model_training/
+paper/
+DOC.md
+
+# Local secrets
+private.key

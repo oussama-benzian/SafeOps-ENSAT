@@ -1,0 +1,22 @@
+{# Template for pinning GitHub Actions to specific SHA #}
+# Fix: Pin GitHub Action to specific commit SHA
+# Rule: {{ rule_id }}
+# Severity: {{ severity }}
+# Description: {{ description }}
+
+# Original (insecure):
+# uses: {{ action_name }}@{{ original_version }}
+
+# Recommended fix:
+# Pin to a specific commit SHA for security and reproducibility
+uses: {{ action_name }}@{{ recommended_sha | default('COMMIT_SHA_HERE') }}
+
+# How to find the SHA:
+# 1. Go to https://github.com/{{ action_name }}/releases
+# 2. Find the version you want (e.g., v4)
+# 3. Click on the commit hash
+# 4. Copy the full 40-character SHA
+
+# Example for common actions:
+# actions/checkout@v4 -> actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+# actions/setup-node@v4 -> actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6

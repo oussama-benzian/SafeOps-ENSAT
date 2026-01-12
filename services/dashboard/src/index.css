@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #e2e8f0;
+  background-color: #0f172a;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background-color: #0f172a;
+}
+
+/* Custom scrollbar - Dark Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Card styles - Simple Dark */
+.card {
+  @apply rounded-xl p-6 transition-all duration-200;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+}
+
+.card:hover {
+  border-color: #475569;
+}
+
+/* Badge styles - Simple Dark Theme */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+.badge-critical {
+  background-color: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.badge-high {
+  background-color: rgba(234, 88, 12, 0.2);
+  color: #fdba74;
+  border: 1px solid rgba(234, 88, 12, 0.3);
+}
+
+.badge-medium {
+  background-color: rgba(202, 138, 4, 0.2);
+  color: #fde047;
+  border: 1px solid rgba(202, 138, 4, 0.3);
+}
+
+.badge-low {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-info {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+/* Button styles - Simple Dark Theme */
+.btn {
+  @apply inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900;
+}
+
+.btn-primary {
+  background-color: #6366f1;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #818cf8;
+}
+
+.btn-secondary {
+  background-color: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+}
+
+.btn-secondary:hover {
+  background-color: #475569;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #ef4444;
+}
+
+/* Status indicator - Simple */
+.status-dot {
+  @apply w-2.5 h-2.5 rounded-full;
+}
+
+.status-dot-success {
+  @apply bg-emerald-400;
+}
+
+.status-dot-warning {
+  @apply bg-amber-400;
+}
+
+.status-dot-danger {
+  @apply bg-red-400;
+}
+
+/* Stat cards - Simple colors */
+.stat-card-critical {
+  background-color: rgba(127, 29, 29, 0.3);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 0.75rem;
+}
+
+.stat-card-high {
+  background-color: rgba(124, 45, 18, 0.3);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  border-radius: 0.75rem;
+}
+
+.stat-card-medium {
+  background-color: rgba(113, 63, 18, 0.3);
+  border: 1px solid rgba(202, 138, 4, 0.3);
+  border-radius: 0.75rem;
+}
+
+.stat-card-low {
+  background-color: rgba(20, 83, 45, 0.3);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 0.75rem;
+}
+
+.stat-card-info {
+  background-color: rgba(49, 46, 129, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 0.75rem;
+}
+
+/* Input styles - Simple Dark Theme */
+input, select, textarea {
+  @apply rounded-lg px-4 py-2.5 transition-all duration-200;
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #64748b;
+}
