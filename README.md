@@ -96,12 +96,6 @@ To rebuild the report:
 pdflatex docs/report/Report.tex
 ```
 
-## Demo
-
-<video controls width="100%">
-  <source src="docs/media/2026-01-12.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
 
 ## Team
 
