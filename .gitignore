@@ -7,3 +7,6 @@ DOC.md
 
 # Local secrets
 private.key
+
+# Large media
+docs/media/*.mp4
